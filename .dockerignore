@@ -1,0 +1,11 @@
+node_modules
+.git
+client/dist
+client/node_modules
+server/node_modules
+server/test.js
+server/state.json
+server/state.json.tmp
+.env
+.env.*
+*.md

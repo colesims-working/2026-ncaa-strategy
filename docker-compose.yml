@@ -1,0 +1,24 @@
+services:
+  draft-hq:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - STATE_DIR=/app/data
+      # - DRAFT_KEY=your-shared-secret-here
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    volumes:
+      - draft-state:/app/data
+
+volumes:
+  draft-state:
