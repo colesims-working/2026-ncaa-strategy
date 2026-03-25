@@ -10,7 +10,10 @@ export default defineConfig({
       "/unpick": "http://localhost:3001",
       "/settings": "http://localhost:3001",
       "/health": "http://localhost:3001",
-      "/events": "http://localhost:3001",
+      "/events": {
+        target: "http://localhost:3001",
+        // SSE requires no response buffering
+      },
     },
   },
 });

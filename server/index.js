@@ -13,10 +13,11 @@ const STATE_FILE = path.join(STATE_DIR, "state.json");
 app.use(express.json({ limit: "100kb" }));
 
 const VALID_DRAFTERS = new Set(["hunter", "cole", "eric", "chris", "lee"]);
+const VALID_SEATS = new Set([1, 2, 3, 4, 5]);
 
 const DEFAULT_STATE = {
   picks: {},
-  cu: "cole",
+  chalkUser: "cole",
   seats: { hunter: 1, cole: 2, eric: 3, chris: 4, lee: 5 },
 };
 
@@ -42,7 +43,7 @@ function isValidState(body) {
     typeof body.picks === "object" &&
     !Array.isArray(body.picks) &&
     body.picks !== null &&
-    typeof body.cu === "string" &&
+    typeof body.chalkUser === "string" &&
     typeof body.seats === "object" &&
     !Array.isArray(body.seats) &&
     body.seats !== null
@@ -120,9 +121,18 @@ app.post("/unpick", authGuard, (req, res) => {
 });
 
 app.post("/settings", authGuard, (req, res) => {
-  const { cu, seats } = req.body;
-  if (cu !== undefined) state.cu = cu;
-  if (seats !== undefined) state.seats = { ...state.seats, ...seats };
+  const { chalkUser, seats } = req.body;
+  if (chalkUser !== undefined) {
+    if (typeof chalkUser !== "string" || !VALID_DRAFTERS.has(chalkUser)) return res.sendStatus(400);
+    state.chalkUser = chalkUser;
+  }
+  if (seats !== undefined) {
+    if (typeof seats !== "object" || Array.isArray(seats) || seats === null) return res.sendStatus(400);
+    for (const [name, seat] of Object.entries(seats)) {
+      if (!VALID_DRAFTERS.has(name) || !VALID_SEATS.has(seat)) return res.sendStatus(400);
+    }
+    state.seats = { ...state.seats, ...seats };
+  }
   persistState();
   broadcast();
   res.json(state);
@@ -131,7 +141,7 @@ app.post("/settings", authGuard, (req, res) => {
 // Serve built client
 const clientDist = path.join(__dirname, "../client/dist");
 app.use(express.static(clientDist));
-app.get(/^(?!\/api).*/, (_req, res, next) => {
+app.get("*", (_req, res, next) => {
   const indexPath = path.join(clientDist, "index.html");
   if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
   next();

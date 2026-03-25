@@ -7,7 +7,7 @@ const { app, getState, setState, DEFAULT_STATE } = require("./index.js");
 beforeEach(() => {
   setState({
     picks: {},
-    cu: "cole",
+    chalkUser: "cole",
     seats: { hunter: 1, cole: 2, eric: 3, chris: 4, lee: 5 },
   });
 });
@@ -28,16 +28,16 @@ describe("GET /state", () => {
   it("returns current state as JSON", async () => {
     const res = await request(app).get("/state").expect(200);
     assert.deepEqual(res.body.picks, {});
-    assert.equal(res.body.cu, "cole");
+    assert.equal(res.body.chalkUser, "cole");
     assert.equal(res.body.seats.hunter, 1);
     assert.equal(res.body.seats.lee, 5);
   });
 
   it("reflects mutations", async () => {
-    setState({ picks: { "Test Player": "cole" }, cu: "chris", seats: DEFAULT_STATE.seats });
+    setState({ picks: { "Test Player": "cole" }, chalkUser: "chris", seats: DEFAULT_STATE.seats });
     const res = await request(app).get("/state").expect(200);
     assert.equal(res.body.picks["Test Player"], "cole");
-    assert.equal(res.body.cu, "chris");
+    assert.equal(res.body.chalkUser, "chris");
   });
 });
 
@@ -118,9 +118,9 @@ describe("POST /settings", () => {
   it("updates chalk user", async () => {
     const res = await request(app)
       .post("/settings")
-      .send({ cu: "chris" })
+      .send({ chalkUser: "chris" })
       .expect(200);
-    assert.equal(res.body.cu, "chris");
+    assert.equal(res.body.chalkUser, "chris");
   });
 
   it("updates partial seats (merge)", async () => {
@@ -132,12 +132,12 @@ describe("POST /settings", () => {
     assert.equal(res.body.seats.hunter, 1); // unchanged
   });
 
-  it("updates both cu and seats", async () => {
+  it("updates both chalkUser and seats", async () => {
     const res = await request(app)
       .post("/settings")
-      .send({ cu: "chris", seats: { lee: 1 } })
+      .send({ chalkUser: "chris", seats: { lee: 1 } })
       .expect(200);
-    assert.equal(res.body.cu, "chris");
+    assert.equal(res.body.chalkUser, "chris");
     assert.equal(res.body.seats.lee, 1);
   });
 
@@ -145,9 +145,44 @@ describe("POST /settings", () => {
     await request(app).post("/pick").send({ player: "Cameron Boozer", drafter: "cole" });
     const res = await request(app)
       .post("/settings")
-      .send({ cu: "chris" })
+      .send({ chalkUser: "chris" })
       .expect(200);
     assert.equal(res.body.picks["Cameron Boozer"], "cole");
+  });
+
+  it("rejects invalid chalkUser", async () => {
+    await request(app)
+      .post("/settings")
+      .send({ chalkUser: "nobody" })
+      .expect(400);
+  });
+
+  it("rejects non-string chalkUser", async () => {
+    await request(app)
+      .post("/settings")
+      .send({ chalkUser: 42 })
+      .expect(400);
+  });
+
+  it("rejects invalid seat value", async () => {
+    await request(app)
+      .post("/settings")
+      .send({ seats: { cole: 99 } })
+      .expect(400);
+  });
+
+  it("rejects invalid drafter name in seats", async () => {
+    await request(app)
+      .post("/settings")
+      .send({ seats: { nobody: 1 } })
+      .expect(400);
+  });
+
+  it("rejects non-object seats", async () => {
+    await request(app)
+      .post("/settings")
+      .send({ seats: "bad" })
+      .expect(400);
   });
 });
 
@@ -159,7 +194,7 @@ describe("POST /state (reset)", () => {
     await request(app).post("/pick").send({ player: "Cameron Boozer", drafter: "cole" });
     await request(app)
       .post("/state")
-      .send({ picks: {}, cu: "cole", seats: DEFAULT_STATE.seats })
+      .send({ picks: {}, chalkUser: "cole", seats: DEFAULT_STATE.seats })
       .expect(204);
     const res = await request(app).get("/state").expect(200);
     assert.deepEqual(res.body.picks, {});
@@ -168,11 +203,11 @@ describe("POST /state (reset)", () => {
   it("rejects invalid state (missing picks)", async () => {
     await request(app)
       .post("/state")
-      .send({ cu: "cole", seats: {} })
+      .send({ chalkUser: "cole", seats: {} })
       .expect(400);
   });
 
-  it("rejects invalid state (missing cu)", async () => {
+  it("rejects invalid state (missing chalkUser)", async () => {
     await request(app)
       .post("/state")
       .send({ picks: {}, seats: {} })
@@ -182,7 +217,7 @@ describe("POST /state (reset)", () => {
   it("rejects invalid state (missing seats)", async () => {
     await request(app)
       .post("/state")
-      .send({ picks: {}, cu: "cole" })
+      .send({ picks: {}, chalkUser: "cole" })
       .expect(400);
   });
 
@@ -260,7 +295,7 @@ describe("GET /events (SSE)", () => {
       req.end();
     });
     assert.deepEqual(state.picks, {});
-    assert.equal(state.cu, "cole");
+    assert.equal(state.chalkUser, "cole");
   });
 
   it("broadcasts on pick", async () => {
@@ -310,10 +345,10 @@ describe("auth guard", () => {
   it("all writes succeed when no DRAFT_KEY set", async () => {
     await request(app).post("/pick").send({ player: "Test", drafter: "cole" }).expect(200);
     await request(app).post("/unpick").send({ player: "Test" }).expect(200);
-    await request(app).post("/settings").send({ cu: "chris" }).expect(200);
+    await request(app).post("/settings").send({ chalkUser: "chris" }).expect(200);
     await request(app)
       .post("/state")
-      .send({ picks: {}, cu: "cole", seats: DEFAULT_STATE.seats })
+      .send({ picks: {}, chalkUser: "cole", seats: DEFAULT_STATE.seats })
       .expect(204);
   });
 });
@@ -415,28 +450,28 @@ describe("POST /state validation strictness", () => {
   it("rejects array as picks", async () => {
     await request(app)
       .post("/state")
-      .send({ picks: [], cu: "cole", seats: DEFAULT_STATE.seats })
+      .send({ picks: [], chalkUser: "cole", seats: DEFAULT_STATE.seats })
       .expect(400);
   });
 
   it("rejects null as picks", async () => {
     await request(app)
       .post("/state")
-      .send({ picks: null, cu: "cole", seats: DEFAULT_STATE.seats })
+      .send({ picks: null, chalkUser: "cole", seats: DEFAULT_STATE.seats })
       .expect(400);
   });
 
   it("rejects array as seats", async () => {
     await request(app)
       .post("/state")
-      .send({ picks: {}, cu: "cole", seats: [1, 2, 3, 4, 5] })
+      .send({ picks: {}, chalkUser: "cole", seats: [1, 2, 3, 4, 5] })
       .expect(400);
   });
 
   it("rejects array as body", async () => {
     await request(app)
       .post("/state")
-      .send([{ picks: {}, cu: "cole", seats: {} }])
+      .send([{ picks: {}, chalkUser: "cole", seats: {} }])
       .expect(400);
   });
 });
@@ -450,7 +485,7 @@ describe("pick/unpick + settings interaction", () => {
     await request(app).post("/pick").send({ player: "AJ Dybantsa", drafter: "chris" });
     const res = await request(app)
       .post("/settings")
-      .send({ cu: "chris" })
+      .send({ chalkUser: "chris" })
       .expect(200);
     assert.equal(Object.keys(res.body.picks).length, 2);
     assert.equal(res.body.picks["Cameron Boozer"], "cole");
@@ -482,7 +517,7 @@ describe("pick/unpick + settings interaction", () => {
 
     await request(app)
       .post("/state")
-      .send({ picks: {}, cu: "cole", seats: DEFAULT_STATE.seats })
+      .send({ picks: {}, chalkUser: "cole", seats: DEFAULT_STATE.seats })
       .expect(204);
 
     res = await request(app).get("/state").expect(200);
@@ -502,7 +537,7 @@ describe("input edge cases", () => {
     assert.equal(res.body.picks["Tomislav Ivišić"], "cole");
   });
 
-  it("player name with only whitespace is rejected", async () => {
+  it("player name with only whitespace is accepted", async () => {
     // " " is truthy, so server allows it - but it's a valid edge case test
     const res = await request(app)
       .post("/pick")
@@ -525,7 +560,7 @@ describe("input edge cases", () => {
       .post("/settings")
       .send({})
       .expect(200);
-    assert.equal(res.body.cu, before.body.cu);
+    assert.equal(res.body.chalkUser, before.body.chalkUser);
     assert.deepEqual(res.body.seats, before.body.seats);
   });
 

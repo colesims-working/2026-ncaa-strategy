@@ -17,14 +17,20 @@ Real-time NCAA tournament draft strategy board. Two users (Cole + Chris) coordin
 
 ```
 client/          React 18 + Vite 5 SPA
-  src/App.jsx    All UI logic (single-file component)
-  src/main.jsx   Entry point
-  index.html     HTML shell with dark mode defaults
-  vite.config.js Dev proxy config
+  src/App.jsx               Root component (composition)
+  src/App.css               All styles (extracted from inline)
+  src/main.jsx              Entry point
+  src/data/players.js       Player dataset (Monte Carlo sim results)
+  src/data/constants.js     Draft config, colors, timing, player sets
+  src/hooks/useSync.js      SSE + polling real-time sync hook
+  src/utils/scoring.js      Adjusted score, snake order, roster summary
+  src/components/DraftControls.jsx  RosterPanel + UnlistedInput
+  index.html                HTML shell with dark mode defaults
+  vite.config.js            Dev proxy config
 
 server/          Express 4 API
   index.js       REST API + SSE + static file serving
-  test.js        48-test suite (Node built-in test runner + supertest)
+  test.js        53-test suite (Node built-in test runner + supertest)
 
 Dockerfile       Multi-stage build (build client → serve from Express)
 docker-compose.yml  Production deployment config
@@ -79,7 +85,7 @@ Client dev server proxies API requests to `localhost:3001` automatically.
 cd server && npm test
 ```
 
-48 tests covering all endpoints, concurrent pick safety, SSE broadcast, input validation, and edge cases.
+53 tests covering all endpoints, concurrent pick safety, SSE broadcast, input validation, and edge cases.
 
 ## Draft Order
 
